@@ -2,11 +2,10 @@ import os
 import subprocess
 from linecache import getline
 from datetime import datetime
-from source import SHOWS_DIR, SUBS_DIR
+from source import SHOWS_DIR, SUBS_DIR, WORD
 
 OUTPUT_DIR = "output"
 TEMP_OUTPUT = "temp"
-WORD = 'fart'
 OUTPUT_FORMAT = 'mp4'
 FINAL_OUTPUT_FNAME = f'output_{WORD}.{OUTPUT_FORMAT}'
 
