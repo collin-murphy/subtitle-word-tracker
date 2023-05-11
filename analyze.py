@@ -1,13 +1,14 @@
 import os
 import subprocess
 from linecache import getline
-from datetime import datetime
-from source import SHOWS_DIR, SUBS_DIR, WORD
+# from datetime import datetime
+from config import SHOWS_DIR, SUBS_DIR, WORD
 
 OUTPUT_DIR = "output"
 TEMP_OUTPUT = "temp"
 OUTPUT_FORMAT = 'mp4'
-FINAL_OUTPUT_FNAME = f'output_{WORD}.{OUTPUT_FORMAT}'
+FINAL_OUTPUT_FNAME = f'output_{WORD}'
+
 
 class Instance:
     def __init__(self, sub_filepath: str, start: str, end: str, video_fname: str = ""):
@@ -19,6 +20,7 @@ class Instance:
 # find the word in each file and put each instance in a list
 def search_word_in_files(word, directory, instances):
     for subdir, _, files in os.walk(directory):
+        # print(f"subdir = {subdir}, files = {files}")
         for file in files:
             filepath = os.path.join(subdir, file)
             with open(filepath, 'r') as f:
@@ -55,20 +57,23 @@ def format_time(time_stamp):
 
     return [start, end]
 
-#make sure output directory is ready for use
+# make sure output directory is ready for use
+
+
 def create_output_dir():
     directory = f"{OUTPUT_DIR}/{TEMP_OUTPUT}"
     if not os.path.exists(directory):
         os.makedirs(directory)
         print(f"Directory '{directory}' created successfully.")
     else:
-        #delete files from temp directory
+        # delete files from temp directory
         cmd = f"rm -rf {directory}/*"
         subprocess.call(cmd, shell=True)
         print(f"Directory '{directory}' already exists.")
 
+
 def find_episode(instance):
-    sub_fname = instance.sub_filepath.rsplit('/')[-2]
+    sub_fname = instance.sub_filepath.rsplit('/')[-1].split('.srt')[0]
     # Iterate over all files in the directory
     for filename in os.listdir(SHOWS_DIR):
         # Check if the filename contains the substring
@@ -91,21 +96,21 @@ def generate_clips(instances):
         generate_clip(i)
 
 
-def combine_clips():
+def combine_clips(output_filepath):
     # Set the directory containing the video files
     directory = f'{OUTPUT_DIR}/{TEMP_OUTPUT}'
 
     # Get a list of all video files in the directory
-    videos = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(f'.{OUTPUT_FORMAT}')]
+    videos = [os.path.join(directory, f) for f in os.listdir(
+        directory) if f.endswith(f'.{OUTPUT_FORMAT}')]
 
-    # Set the output file name and path
-    output_file = f"{OUTPUT_DIR}/{FINAL_OUTPUT_FNAME}"
 
     # Build the ffmpeg command to concatenate all the video files
     ffmpeg_command = ['ffmpeg']
     for video in videos:
         ffmpeg_command.extend(['-i', video])
-    ffmpeg_command.extend(['-filter_complex', 'concat=n={}:v=1:a=1'.format(len(videos)), output_file])
+    ffmpeg_command.extend(
+        ['-filter_complex', 'concat=n={}:v=1:a=1'.format(len(videos)), output_filepath])
 
     # Run the ffmpeg command using subprocess
     subprocess.run(ffmpeg_command, check=True)
@@ -116,9 +121,10 @@ def combine_clips():
 
 if __name__ == "__main__":
     instances = []
-    print("Searching for instances of {WORD}...")
+    print(f"Searching for instances of '{WORD}'...")
     search_word_in_files(WORD, SUBS_DIR, instances)
-    print(f"Found {len(instances)} instances of {WORD}")
+    print(f"Found {len(instances)} instances of '{WORD}'")
+
 
     create_output_dir()
     print("Generating video clips...")
@@ -128,5 +134,6 @@ if __name__ == "__main__":
     generate_clips(instances)
 
     print("Combining video clips...")
-    combine_clips() 
-    print(f"Final output available at {OUTPUT_DIR}/{FINAL_OUTPUT_FNAME}")
+    final_fpath = f"{OUTPUT_DIR}/{FINAL_OUTPUT_FNAME}-{len(instances)}.{OUTPUT_FORMAT}"
+    combine_clips(final_fpath)
+    print(f"Final output available at {final_fpath}")
